@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   Globe, Shield, Users, Zap, Target, Award, TrendingUp, 
-  Building, Smartphone, CreditCard, ArrowRight, CheckCircle 
+  CreditCard, ArrowRight, CheckCircle 
 } from 'lucide-react';
 
 const About: React.FC = () => {

@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Upload, DollarSign, Shield, Users, CheckCircle, Clock, ArrowRight, 
-  Play, Pause, FileText, User, Globe, Zap, AlertTriangle, Eye,
-  Smartphone, Fingerprint, CreditCard, Building, Mail, Phone
+  Upload, CheckCircle, FileText, User, Zap, AlertTriangle,
+  Smartphone, Building
 } from 'lucide-react';
 
 interface PaymentData {
@@ -76,15 +75,15 @@ const InteractiveDemo: React.FC = () => {
   const [escalationReason, setEscalationReason] = useState('');
 
   const countdownRef = useRef<number | null>(null);
-  const processingRef = useRef<number | null>(null);
+  // const processingRef = useRef<number | null>(null);
 
   // Mock FX rates
-  const mockFXRates = {
-    'NGN/USDT': 1650.50,
-    'CNY/USDT': 7.20,
-    'TRY/USDT': 28.50,
-    'INR/USDT': 82.30
-  };
+  // const mockFXRates = {
+  //   'NGN/USDT': 1650.50,
+  //   'CNY/USDT': 7.20,
+  //   'TRY/USDT': 28.50,
+  //   'INR/USDT': 82.30
+  // };
 
   // Mock agents
   const mockAgents = [
