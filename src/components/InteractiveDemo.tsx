@@ -665,10 +665,10 @@ const InteractiveDemo: React.FC = () => {
                   </div>
                 )}
 
-                {/* Backend Conversion Data (Hidden from Business) */}
+                {/* Backend Conversion Data */}
                 {paymentData.hkdAmount > 0 && (
                   <div className="bg-white/5 rounded-lg p-4 border border-yellow-500/30">
-                    <div className="text-yellow-300 text-sm mb-2">Backend Conversion (Hidden from Business)</div>
+                    <div className="text-yellow-300 text-sm mb-2">Backend Conversion</div>
                     <div className="text-white text-sm">
                       <div>Input: ₦{paymentData.amount.toLocaleString()} (NGN)</div>
                       <div>HKD FX Rate: 1 NGN = HK${(1 / paymentData.fxRate).toFixed(6)}</div>
