@@ -16,6 +16,7 @@ interface PaymentData {
     bankName: string;
   };
   fxRate: number;
+  hkdAmount: number;
   usdtAmount: number;
   referenceId: string;
   invoiceFile: File | null;
@@ -54,7 +55,8 @@ const InteractiveDemo: React.FC = () => {
       bankAccount: '',
       bankName: ''
     },
-    fxRate: 1650.50,
+    fxRate: 580.25,
+    hkdAmount: 0,
     usdtAmount: 0,
     referenceId: '',
     invoiceFile: null,
@@ -76,6 +78,44 @@ const InteractiveDemo: React.FC = () => {
 
   const countdownRef = useRef<number | null>(null);
   // const processingRef = useRef<number | null>(null);
+
+  // Binance API integration
+  const [binanceRate, setBinanceRate] = useState<number>(0);
+  const [isLoadingRate, setIsLoadingRate] = useState<boolean>(false);
+
+  // Fetch current USDT rate from Binance
+  const fetchBinanceRate = async () => {
+    setIsLoadingRate(true);
+    try {
+      const response = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=USDTNGN');
+      const data = await response.json();
+      const rate = parseFloat(data.price);
+      setBinanceRate(rate);
+      
+      // Update payment data with new USDT amount
+      if (paymentData.amount > 0) {
+        const usdtAmount = paymentData.amount / rate;
+        setPaymentData(prev => ({
+          ...prev,
+          usdtAmount: parseFloat(usdtAmount.toFixed(2))
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching Binance rate:', error);
+      // Fallback to a default rate if API fails
+      const fallbackRate = 1200; // Approximate NGN/USDT rate
+      setBinanceRate(fallbackRate);
+      if (paymentData.amount > 0) {
+        const usdtAmount = paymentData.amount / fallbackRate;
+        setPaymentData(prev => ({
+          ...prev,
+          usdtAmount: parseFloat(usdtAmount.toFixed(2))
+        }));
+      }
+    } finally {
+      setIsLoadingRate(false);
+    }
+  };
 
   // Mock FX rates
   // const mockFXRates = {
@@ -133,16 +173,32 @@ const InteractiveDemo: React.FC = () => {
     }
   };
 
-  // Calculate USDT amount
+  // Calculate HKD amount (hidden from business, only for backend)
   useEffect(() => {
     if (paymentData.amount > 0) {
-      const usdtAmount = paymentData.amount / paymentData.fxRate;
+      const hkdAmount = paymentData.amount / paymentData.fxRate;
+      setPaymentData(prev => ({
+        ...prev,
+        hkdAmount: parseFloat(hkdAmount.toFixed(2))
+      }));
+    }
+  }, [paymentData.amount, paymentData.fxRate]);
+
+  // Calculate USDT amount when amount changes
+  useEffect(() => {
+    if (paymentData.amount > 0 && binanceRate > 0) {
+      const usdtAmount = paymentData.amount / binanceRate;
       setPaymentData(prev => ({
         ...prev,
         usdtAmount: parseFloat(usdtAmount.toFixed(2))
       }));
     }
-  }, [paymentData.amount, paymentData.fxRate]);
+  }, [paymentData.amount, binanceRate]);
+
+  // Fetch Binance rate on component mount
+  useEffect(() => {
+    fetchBinanceRate();
+  }, []);
 
   // Countdown timer
   useEffect(() => {
@@ -190,7 +246,7 @@ const InteractiveDemo: React.FC = () => {
       { status: 'Scanning invoice with OCR...', delay: 2000 },
       { status: 'Validating business details...', delay: 1500 },
       { status: 'Checking recipient information...', delay: 1000 },
-      { status: 'Converting NGN to USDT...', delay: 2000 },
+      { status: 'Converting NGN to HKD...', delay: 2000 },
       { status: 'Funding escrow smart contract...', delay: 3000 },
       { status: 'Assigning OTC agent...', delay: 2500 }
     ];
@@ -260,7 +316,8 @@ const InteractiveDemo: React.FC = () => {
         bankAccount: '',
         bankName: ''
       },
-      fxRate: 1650.50,
+      fxRate: 580.25,
+      hkdAmount: 0,
       usdtAmount: 0,
       referenceId: '',
       invoiceFile: null,
@@ -319,8 +376,18 @@ const InteractiveDemo: React.FC = () => {
                       <span className="text-red-400 font-bold">{formatCountdown(countdown)}</span>
                     </div>
                     <div className="text-2xl font-bold text-cross-purple-300">
-                      1 NGN = ${(1 / paymentData.fxRate).toFixed(6)} USDT
+                      1 NGN = HK${(1 / paymentData.fxRate).toFixed(6)} (HKD)
                     </div>
+                    <div className="mt-2 text-sm text-gray-300">
+                      USDT Rate: ₦{binanceRate > 0 ? binanceRate.toFixed(2) : 'Loading...'} = 1 USDT
+                    </div>
+                    <button
+                      onClick={fetchBinanceRate}
+                      disabled={isLoadingRate}
+                      className="mt-2 text-xs bg-white/10 px-3 py-1 rounded text-white hover:bg-white/20 transition-colors disabled:opacity-50"
+                    >
+                      {isLoadingRate ? 'Refreshing...' : 'Refresh USDT Rate'}
+                    </button>
                   </div>
 
                   {/* Payment Form */}
@@ -336,11 +403,6 @@ const InteractiveDemo: React.FC = () => {
                         className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-cross-purple-300 focus:outline-none"
                         placeholder="Enter amount in NGN"
                       />
-                      {paymentData.usdtAmount > 0 && (
-                        <div className="mt-2 text-sm text-gray-300">
-                          ≈ {paymentData.usdtAmount} USDT
-                        </div>
-                      )}
                     </div>
 
                     <div>
@@ -511,7 +573,7 @@ const InteractiveDemo: React.FC = () => {
                   </div>
                   <div className="text-white text-sm space-y-1">
                     <div>Reference ID: {paymentData.referenceId}</div>
-                    <div>Amount: ₦{paymentData.amount.toLocaleString()} → {paymentData.usdtAmount} USDT</div>
+                    <div>Amount: ₦{paymentData.amount.toLocaleString()} → HK${paymentData.hkdAmount} (HKD)</div>
                     <div>Recipient: {paymentData.recipient.name}</div>
                   </div>
                 </div>
@@ -603,6 +665,22 @@ const InteractiveDemo: React.FC = () => {
                   </div>
                 )}
 
+                {/* Backend Conversion Data (Hidden from Business) */}
+                {paymentData.hkdAmount > 0 && (
+                  <div className="bg-white/5 rounded-lg p-4 border border-yellow-500/30">
+                    <div className="text-yellow-300 text-sm mb-2">Backend Conversion (Hidden from Business)</div>
+                    <div className="text-white text-sm">
+                      <div>Input: ₦{paymentData.amount.toLocaleString()} (NGN)</div>
+                      <div>HKD FX Rate: 1 NGN = HK${(1 / paymentData.fxRate).toFixed(6)}</div>
+                      <div>HKD Output: HK${paymentData.hkdAmount.toFixed(2)} (HKD)</div>
+                      <div className="mt-2 pt-2 border-t border-white/10">
+                        <div>USDT Rate: ₦{binanceRate.toFixed(2)} = 1 USDT</div>
+                        <div>USDT Output: {paymentData.usdtAmount} USDT</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Confirmation Data */}
                 {confirmationData.secureLink && (
                   <div className="bg-white/5 rounded-lg p-4">
@@ -630,8 +708,13 @@ const InteractiveDemo: React.FC = () => {
                   <div className="text-white font-semibold mb-2">Payment Details</div>
                   <div className="text-gray-300 text-sm space-y-1">
                     <div>From: Business Account</div>
-                    <div>Amount: ₦{paymentData.amount.toLocaleString()}</div>
+                    <div>Amount: {paymentData.usdtAmount} USDT</div>
                     <div>Reference: {paymentData.referenceId}</div>
+                    {binanceRate > 0 && (
+                      <div className="text-xs text-gray-400 mt-2">
+                        Rate: ₦{binanceRate.toFixed(2)} = 1 USDT
+                      </div>
+                    )}
                   </div>
                 </div>
 
